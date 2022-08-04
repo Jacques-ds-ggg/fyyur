@@ -12,16 +12,18 @@ import logging
 from logging import Formatter, FileHandler
 from flask_wtf import Form
 from forms import *
+from flask_migrate import Migrate
 #----------------------------------------------------------------------------#
 # App Config.
 #----------------------------------------------------------------------------#
 
 app = Flask(__name__)
 moment = Moment(app)
-app.config.from_object('config')
 db = SQLAlchemy(app)
 
 # TODO: connect to a local postgresql database
+app.config.from_object('config') # db URI from the config.py file
+migrate = Migrate(app, db)       # database migration using Flask-Migrate
 
 #----------------------------------------------------------------------------#
 # Models.
@@ -40,6 +42,14 @@ class Venue(db.Model):
     facebook_link = db.Column(db.String(120))
 
     # TODO: implement any missing fields, as a database migration using Flask-Migrate
+    genres = db.Column(db.String(120))           # genre as an Array
+    website_link = db.Column(db.String(120))          # website link is not in the above _items
+    seek_talent = db.Column(db.String(120))        # Seeking talent is not in the above
+
+    show = db.relationships('Shows', backref='Venue', lazy=True) # On Parent Model, passs child model using db.relationships
+
+    def __repr__(self):
+      return f"Venue ID: {self.id}, Venue Name: {self.name}, Venue City: {self.city}, Venue State: {self.state}, Venue Address: {self.address}, Venue Phone: {self.phone}, Venue Image-Link: {self.image_link}, FB-Link: {self.facebook_link}, Venue Genres: {self.genres}, Venue Website-link: {self.website_link}, Venue Seek talent: {self.seek_talent}"
 
 class Artist(db.Model):
     __tablename__ = 'Artist'
@@ -54,8 +64,26 @@ class Artist(db.Model):
     facebook_link = db.Column(db.String(120))
 
     # TODO: implement any missing fields, as a database migration using Flask-Migrate
+    website_link = db.Column(db.String(120))
+    seek_venue = db.Column(db.String(120))
+
+    # On Parent Model, passs child model using db.relationships
+    show = db.relationships('Shows', backref='Artist', lazy=True)
+
+    def __repr__(self):
+      return f"Venue ID: {self.id}, Venue Name: {self.name}, Venue City: {self.city}, Venue State: {self.state}, Venue Address: {self.address}, Venue Phone: {self.phone}, Venue Image-Link: {self.image_link}, FB-Link: {self.facebook_link}, Venue Genres: {self.genres}, Venue Website-link: {self.website_link}, Venue Seek Venue: {self.seek_venue}"
 
 # TODO Implement Show and Artist models, and complete all model relationships and properties, as a database migration.
+class Show(db.Model):    # Shows table
+    __tablename__ = 'Shows'
+
+    id = db.Column(db.Integer, primary_key=True)
+    show_start = db.Column(db.String(120))
+    artist = db.Column(db.Integer, db.ForeignKey('artist.id'),nullable=False)
+    venue = db.Column(db.Integer, db.ForeignKey('venue.id'),nullable=False)
+
+    def __repr__(self):
+      return f"Show ID: {self.id}, Show Start: {self.show_start}, Show Artist: {self.artist}, Show Venue: {self.venue}"
 
 #----------------------------------------------------------------------------#
 # Filters.
