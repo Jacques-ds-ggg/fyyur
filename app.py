@@ -82,8 +82,8 @@ class Shows(db.Model):    # Shows table
 
     id = db.Column(db.Integer, primary_key=True)
     show_start = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    artist_id = db.Column(db.Integer, db.ForeignKey('artist.id'),nullable=False)
-    venue_id = db.Column(db.Integer, db.ForeignKey('venue.id'),nullable=False)
+    artist_id = db.Column(db.Integer, db.ForeignKey('Artist.id'),nullable=False)
+    venue_id = db.Column(db.Integer, db.ForeignKey('Venue.id'),nullable=False)
 
     def __repr__(self):
       return f"Show ID: {self.id}, Show Start: {self.show_start}, Show Artist: {self.artist_id}, Show Venue: {self.venue_id}"
@@ -175,6 +175,7 @@ def search_venues():
 			'name': venue.name,
 			'num_upcoming_shows': Shows.query.filter(isUpcomingShow(Shows.start_time)).filter(Shows.venue_id == venue.id).count()
 		})
+
   response = {
 		'count': len(venues),
 		'data': venue_list
@@ -221,19 +222,19 @@ def show_venue(venue_id):
 	}
 
   for show in venue.shows:
-		show_dict = {
-			'artist_id': show.artist_id,
-			'artist_name': show.artist.name,
-			'artist_image_link': show.artist.image_link,
-			'start_time': show.start_time
-		}
+      show_dict = {
+        'artist_id': show.artist_id,
+        'artist_name': show.artist.name,
+        'artist_image_link': show.artist.image_link,
+        'start_time': show.start_time
+      }
 
-		if isUpcomingShow(show.start_time):
-			data['upcoming_shows'].append(show_dict)
-		else:
-			data['past_shows'].append(show_dict)
+      if isUpcomingShow(show.start_time):
+        data['upcoming_shows'].append(show_dict)
+      else:
+        data['past_shows'].append(show_dict)
 	
-	data['upcoming_shows_count'] = len(data['upcoming_shows'])
+  data['upcoming_shows_count'] = len(data['upcoming_shows'])
 
   # data1={
   #   "id": 1,
@@ -696,7 +697,7 @@ def shows():
   for show in shows:
     show_l = {}
     show_l['venue_id'] = show.venues.id
-    show_l['venue_name'] = show.venue.name
+    show_l['venue_name'] = show.venues.name
     show_l['artist_id'] = show.artists.id
     show_l['artist_name'] = show.artists.name
     show_l['artist_image_link'] = show.artists.image_link
