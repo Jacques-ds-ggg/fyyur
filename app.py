@@ -48,7 +48,7 @@ class Venue(db.Model):
     seek_talent = db.Column(db.String(120))        # Seeking talent is not in the above
     seeking_description = db.Column(db.String(500))
 
-    show = db.relationship('Show', backref='Venue', lazy=True) # On Parent Model, passs child model using db.relationships
+    show = db.relationship('Shows', backref='Venue', lazy=True) # On Parent Model, passs child model using db.relationships
 
     def __repr__(self):
       return f"Venue ID: {self.id}, Venue Name: {self.name}, Venue City: {self.city}, Venue State: {self.state}, Venue Address: {self.address}, Venue Phone: {self.phone}, Venue Image-Link: {self.image_link}, FB-Link: {self.facebook_link}, Venue Genres: {self.genres}, Venue Website-link: {self.website_link}, Venue Seek talent: {self.seek_talent}"
@@ -71,7 +71,7 @@ class Artist(db.Model):
     seeking_description = db.Column(db.String(500))
 
     # On Parent Model, passs child model using db.relationships
-    show = db.relationship('Show', backref='Artist', lazy=True)
+    show = db.relationship('Shows', backref='Artist', lazy=True)
 
     def __repr__(self):
       return f"Venue ID: {self.id}, Venue Name: {self.name}, Venue City: {self.city}, Venue State: {self.state}, Venue Address: {self.address}, Venue Phone: {self.phone}, Venue Image-Link: {self.image_link}, FB-Link: {self.facebook_link}, Venue Genres: {self.genres}, Venue Website-link: {self.website_link}, Venue Seek Venue: {self.seek_venue}"
@@ -131,7 +131,9 @@ def venues():
         venue_list.append({
           'id': venue.id,
           'name': venue.name,
-          'num_upcoming_shows': Shows.query.filter(isUpcomingShow(Shows.show_start)).filter(Shows.venue_id == venue.id).count()  
+          # len(list(filter(lambda x: x.start_time > datetime.now(), venue.shows)))
+          'num_upcoming_shows': len(list(filter(lambda s: s.start_time > datetime.now(), venue.shows)))
+          # 'num_upcoming_shows': Shows.query.filter(isUpcomingShow(Shows.show_start)).filter(Shows.venue_id == venue.id).count()  
         })
     data.append({
       **area,
@@ -173,7 +175,7 @@ def search_venues():
 	  venue_list.append({
 			'id': venue.id,
 			'name': venue.name,
-			'num_upcoming_shows': Shows.query.filter(isUpcomingShow(Shows.start_time)).filter(Shows.venue_id == venue.id).count()
+			'num_upcoming_shows': len(list(filter(lambda s: s.start_time > datetime.now(), venue.shows)))
 		})
 
   response = {
@@ -197,44 +199,71 @@ def show_venue(venue_id):
   # TODO: replace with real venue data from the venues table, using venue_id
 
   venue = Venue.query.get(venue_id)	
-  if not venue: return redirect(url_for('index'))	
-  venue_data = {
-		'id': venue.id,
-		'name': venue.name,
-		'genres': venue.genres,
-		'address': venue.address,
-		'city': venue.city,
-		'state': venue.state,
-		'phone': venue.phone.international,
-		'website': venue.website_link,
-		'facebook_link': venue.facebook_link,
-		'seeking_talent': venue.seeking_talent,
-		'seeking_description': venue.seeking_description,
-		'image_link': venue.image_link,
-	}
+  setattr(venue, "genres", venue.genres.split(","))
+  past_shows = list(filter(lambda s: s.start_time < datetime.now(), venue.shows))  
+  shows_l = []
+  for show in past_shows:
+    show_2 = {}
+    show_2['artist_name'] = show.artist.name
+    show_2['artist_id'] = show.artist.id
+    show_2['artist_image_link'] = show.artists.image_link
+    show_2['start_time'] = show.start_time.strftime("%m/%d/%Y, %H:%M:%S")
+    shows_l.append(show_2)
+  
+  setattr(venue, "past_shows", shows_l)
+  setattr(venue, "past_shows_count", len(past_shows))
 
-  data = {
-		**venue_data,
-		'past_shows': [],
-		'upcoming_shows': [],
-		'past_shows_count': 0,
-    'upcoming_shows_count': 0
-	}
+  upcoming_shows = list(filter(lambda s: s.start_time > datetime.now(), venue.shows))  
+  shows_l = []
+  for show in past_shows:
+    show_2 = {}
+    show_2['artist_name'] = show.artist.name
+    show_2['artist_id'] = show.artist.id
+    show_2['artist_image_link'] = show.artists.image_link
+    show_2['start_time'] = show.start_time.strftime("%m/%d/%Y, %H:%M:%S")
+    shows_l.append(show_2)
+  
+  setattr(venue, "upcoming_shows", shows_l)
+  setattr(venue, "upcoming_shows_count", len(upcoming_shows))
 
-  for show in venue.shows:
-      show_dict = {
-        'artist_id': show.artist_id,
-        'artist_name': show.artist.name,
-        'artist_image_link': show.artist.image_link,
-        'start_time': show.start_time
-      }
+  # if not venue: return redirect(url_for('index'))	
+  # venue_data = {
+	# 	'id': venue.id,
+	# 	'name': venue.name,
+	# 	'genres': venue.genres,
+	# 	'address': venue.address,
+	# 	'city': venue.city,
+	# 	'state': venue.state,
+	# 	'phone': venue.phone.international,
+	# 	'website': venue.website_link,
+	# 	'facebook_link': venue.facebook_link,
+	# 	'seeking_talent': venue.seeking_talent,
+	# 	'seeking_description': venue.seeking_description,
+	# 	'image_link': venue.image_link,
+	# }
 
-      if isUpcomingShow(show.start_time):
-        data['upcoming_shows'].append(show_dict)
-      else:
-        data['past_shows'].append(show_dict)
+  # data = {
+	# 	**venue_data,
+	# 	'past_shows': [],
+	# 	'upcoming_shows': [],
+	# 	'past_shows_count': 0,
+  #   'upcoming_shows_count': 0
+	# }
+
+  # for show in venue.shows:
+  #     show_dict = {
+  #       'artist_id': show.artist_id,
+  #       'artist_name': show.artist.name,
+  #       'artist_image_link': show.artist.image_link,
+  #       'start_time': show.start_time
+  #     }
+
+  #     if isUpcomingShow(show.start_time):
+  #       data['upcoming_shows'].append(show_dict)
+  #     else:
+  #       data['past_shows'].append(show_dict)
 	
-  data['upcoming_shows_count'] = len(data['upcoming_shows'])
+  # data['upcoming_shows_count'] = len(data['upcoming_shows'])
 
   # data1={
   #   "id": 1,
@@ -314,7 +343,7 @@ def show_venue(venue_id):
   #   "upcoming_shows_count": 1,
   # }
   # data = list(filter(lambda d: d['id'] == venue_id, [data1, data2, data3]))[0]
-  return render_template('pages/show_venue.html', venue=data)
+  return render_template('pages/show_venue.html', venue=venue)
 
 #  Create Venue
 #  ----------------------------------------------------------------
@@ -404,7 +433,7 @@ def search_artists():
   # search for "band" should return "The Wild Sax Band".
 
   search_term = request.form.get('search_term', '')
-  artists = Artists.query.filter(
+  artists = Artist.query.filter(
     Artist.name.ilike(f"${search_term}$") |
     Artist.city.ilike(f"${search_term}$") |
     Artist.state.ilike(f"${search_term}$")
@@ -451,9 +480,9 @@ def show_artist(artist_id):
     shows_l.append(show_2)
   
   setattr(artist, "past_shows", shows_l)
-  setattr(artist, "count_past_shows", len(past_shows))
+  setattr(artist, "past_shows_count", len(past_shows))
 
-  upcoming_shows - list(filter(lambda s: s.start_time > datetime.now(), artist.shows))
+  upcoming_shows = list(filter(lambda s: s.start_time > datetime.now(), artist.shows))
   shows_l = []
   for show in upcoming_shows:
     show_2 = {}
@@ -465,7 +494,7 @@ def show_artist(artist_id):
     shows_l.append(show_2)
   
   setattr(artist, "upcoming_shows", shows_l)
-  setattr(artist, "count_upcoming_shows", len(upcoming_shows))
+  setattr(artist, "upcoming_shows_count", len(upcoming_shows))
 
   # data1={
   #   "id": 4,
@@ -693,7 +722,7 @@ def shows():
 
   data = []
 
-  shows = Show.query.all()
+  shows = Shows.query.all()
   for show in shows:
     show_l = {}
     show_l['venue_id'] = show.venues.id
@@ -756,7 +785,7 @@ def create_show_submission():
   form = ShowForm(request.form)
 
   try:
-    new_show = Show(
+    new_show = Shows(
       artist_id=form.artist_id.data,
       venue_id=form.venue_id.data,
       start_time=form.start_time.data,
